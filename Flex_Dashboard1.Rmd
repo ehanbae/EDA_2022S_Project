@@ -1,0 +1,201 @@
+---
+title: "S&P 종목 전망"
+author: "배이한"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+
+library(tidyverse)
+library(readr)
+library(flexdashboard)
+library(DT)
+library(shiny)
+library(ggplot2)
+library(tidyquant)
+
+SampleData <- as.data.frame(read.csv("Sample Data.csv"))
+
+y2022 <- dplyr::filter(SampleData, grepl("22", SampleData$EPSPeriod)|grepl("22",SampleData$SalesPeriod)|grepl("22",SampleData$DivPeriod))
+
+y2023 <- dplyr::filter(SampleData, grepl("23", SampleData$EPSPeriod)|grepl("23",SampleData$SalesPeriod)|grepl("23",SampleData$DivPeriod))
+
+y2024 <- dplyr::filter(SampleData, grepl("24", SampleData$EPSPeriod)|grepl("24",SampleData$SalesPeriod)|grepl("24",SampleData$DivPeriod))
+
+EPS2022 <- dplyr::filter(SampleData, grepl("22", SampleData$EPSPeriod))
+EPS2023 <- dplyr::filter(SampleData, grepl("23", SampleData$EPSPeriod))
+EPS2024 <- dplyr::filter(SampleData, grepl("24", SampleData$EPSPeriod))
+
+Sales2022 <- dplyr::filter(SampleData, grepl("22", SampleData$SalesPeriod))
+Sales2023 <- dplyr::filter(SampleData, grepl("23", SampleData$SalesPeriod))
+Sales2024 <- dplyr::filter(SampleData, grepl("24", SampleData$SalesPeriod))
+
+Div2022 <- dplyr::filter(SampleData, grepl("22", SampleData$DivPeriod))
+Div2023 <- dplyr::filter(SampleData, grepl("23", SampleData$DivPeriod))
+Div2024 <- dplyr::filter(SampleData, grepl("24", SampleData$DivPeriod))
+```
+
+Overall
+=======================================================================
+
+### 애널리스트 전망
+
+Row {.tabset}
+-----------------------------------------------------------------------
+### 2022
+
+```{r}
+DT::datatable(y2022[, c("rank", "stock","EPS","Sales","Div")], rownames = FALSE,
+  colnames = c("순서","종목","EPS","매출","배당"), options = list(pageLength = 20)
+)
+```
+
+### 2023
+
+```{r}
+DT::datatable(y2023[, c("rank", "stock","EPS","Sales","Div")],
+  rownames = FALSE, colnames = c("순서","종목","EPS","매출","배당"), options = list(pageLength = 20)
+)
+```
+
+### 2024
+
+```{r}
+DT::datatable(y2024[, c("rank", "stock","EPS","Sales","Div")],
+  rownames = FALSE, colnames = c("순서","종목","EPS","매출","배당"), options = list(pageLength = 20)
+)
+```
+
+
+
+
+Stock
+=======================================================================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+### 애널리스트 실적 전망
+
+```{r}
+#DT::datatable(Ticker[, c("rank","ticker")],
+#  rownames = FALSE, options = list(pageLength = 10))
+inputPanel(
+  shiny::selectInput("Stock1", label = "Stock",
+            choices = unique(SampleData$stock), selected = unique(SampleData$stock)[1])
+)
+```
+
+
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+
+
+
+### EPS 전망
+
+```{r}
+output$p1 <- renderPlot({
+
+SampleData %>% 
+  filter(stock==input$Stock1) %>% 
+  ggplot(aes(x = EPSPeriod, y = EPS))+
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) +
+  theme_minimal()
+
+})
+
+plotOutput("p1")
+```
+
+### 매출 전망
+
+```{r}
+
+output$p2 <- renderPlot({
+
+SampleData %>% 
+  filter(stock==input$Stock1) %>% 
+  ggplot(aes(x = SalesPeriod, y = Sales))+
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) +
+  theme_minimal()
+
+})
+
+plotOutput("p2")
+
+```
+
+
+### 배당금 전망
+
+```{r}
+
+output$p3 <- renderPlot({
+
+SampleData %>% 
+  filter(stock==input$Stock1) %>% 
+  ggplot(aes(x = DivPeriod, y = Div))+
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) +
+  theme_minimal()
+
+})
+
+plotOutput("p3")
+
+```
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### 산업에서의 경쟁력
+
+```{r}
+
+renderText(
+  str_c("같은 산업의 ",
+        SampleData$TotalInIndustry[SampleData$stock==paste(input$Stock1)][1], 
+        " 개의 종목 중 ",
+    SampleData$RankInIndustry[SampleData$stock==paste(input$Stock1)][1],
+    "번째로 매력적입니다.")  
+)
+
+```
+
+
+### 섹터에서의 경쟁력
+
+```{r}
+
+renderText(
+  str_c("같은 섹터의 ",
+        SampleData$TotalInSector[SampleData$stock==paste(input$Stock1)][1], 
+        " 개의 종목 중 ",
+    SampleData$RankInSector[SampleData$stock==paste(input$Stock1)][1],
+    "번째로 매력적입니다.")  
+)
+
+```
+
+### 증시에서의 경쟁력
+
+```{r}
+
+renderText(
+  str_c("증시에 상장된 ",
+        SampleData$TotalInAll[SampleData$stock==paste(input$Stock1)][1], 
+        " 개의 종목 중 ",
+    SampleData$RankInAll[SampleData$stock==paste(input$Stock1)][1],
+    "번째로 매력적입니다.")  
+)
+
+```
+
