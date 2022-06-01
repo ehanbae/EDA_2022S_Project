@@ -106,8 +106,9 @@ output$p1 <- renderPlot({
 
 SampleData %>% 
   filter(stock==input$Stock1) %>% 
-  ggplot(aes(x = EPSPeriod, y = EPS))+
-  geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) +
+  ggplot(aes(x = EPSPeriod, y = EPS))+ 
+  geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) + 
+    labs(x = "연도", y = "주당 순이익") +
   theme_minimal()
 
 })
@@ -123,7 +124,7 @@ output$p2 <- renderPlot({
 
 SampleData %>% 
   filter(stock==input$Stock1) %>% 
-  ggplot(aes(x = SalesPeriod, y = Sales))+
+  ggplot(aes(x = SalesPeriod, y = Sales))+ xlab("연도") + ylab("총 매출") +
   geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) +
   theme_minimal()
 
@@ -142,7 +143,7 @@ output$p3 <- renderPlot({
 
 SampleData %>% 
   filter(stock==input$Stock1) %>% 
-  ggplot(aes(x = DivPeriod, y = Div))+
+  ggplot(aes(x = DivPeriod, y = Div))+ xlab("연도") + ylab("배당금") +
   geom_bar(stat = "identity", fill = "steelblue", width = 0.5, position = position_dodge(width=0.5)) +
   theme_minimal()
 
