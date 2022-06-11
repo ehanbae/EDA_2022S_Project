@@ -1,0 +1,288 @@
+---
+title: "대형주 실적 전망"
+author: "배이한"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+
+
+runtime: shiny
+resource_files:
+- EDA_2022S_Project.Rproj
+---
+
+```{r setup, include=FALSE}
+
+
+library(tidyverse)
+library(readr)
+library(flexdashboard)
+library(DT)
+library(shiny)
+library(shinydashboard)
+library(ggplot2)
+library(tidyquant)
+library(bslib)
+library(rsconnect)
+library(patchwork)
+library(scales)
+
+fluidPage(theme=bs_theme())
+
+
+Data <- read.csv("Stock_Information.csv")
+
+y2022 <- dplyr::filter(Data, grepl("22", Data$EPSPeriod)|grepl("22",Data$SalesPeriod)|grepl("22",Data$DivPeriod))
+
+y2023 <- dplyr::filter(Data, grepl("23", Data$EPSPeriod)|grepl("23",Data$SalesPeriod)|grepl("23",Data$DivPeriod))
+
+y2024 <- dplyr::filter(Data, grepl("24", Data$EPSPeriod)|grepl("24",Data$SalesPeriod)|grepl("24",Data$DivPeriod))
+
+EPS2022 <- dplyr::filter(Data, grepl("22", Data$EPSPeriod))
+EPS2023 <- dplyr::filter(Data, grepl("23", Data$EPSPeriod))
+EPS2024 <- dplyr::filter(Data, grepl("24", Data$EPSPeriod))
+
+Sales2022 <- dplyr::filter(Data, grepl("22", Data$SalesPeriod))
+Sales2023 <- dplyr::filter(Data, grepl("23", Data$SalesPeriod))
+Sales2024 <- dplyr::filter(Data, grepl("24", Data$SalesPeriod))
+
+Div2022 <- dplyr::filter(Data, grepl("22", Data$DivPeriod))
+Div2023 <- dplyr::filter(Data, grepl("23", Data$DivPeriod))
+Div2024 <- dplyr::filter(Data, grepl("24", Data$DivPeriod))
+
+```
+
+Overall
+=======================================================================
+
+### 대형주 <br> 실적 전망
+
+Row {.tabset}
+-----------------------------------------------------------------------
+### 2022
+
+```{r}
+DT::datatable(y2022[, c("rank", "stock","EPS","SalesS","Div")], 
+  rownames = FALSE, colnames = c("순서","종목","EPS","매출","배당"), options = list(pageLength = 20)
+)
+```
+
+### 2023
+
+```{r}
+DT::datatable(y2023[, c("rank", "stock","EPS","SalesS","Div")],
+  rownames = FALSE, colnames = c("순서","종목","EPS","매출","배당"), options = list(pageLength = 20)
+)
+```
+
+
+
+
+Stock
+=======================================================================
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+### 애널리스트 실적 전망
+
+```{r}
+#DT::datatable(Ticker[, c("rank","ticker")],
+#  rownames = FALSE, options = list(pageLength = 10))
+inputPanel(
+  shiny::selectInput("Stock1", label = "Stock",
+            choices = unique(Data$stock), selected = unique(Data$stock)[1])
+)
+
+
+```
+
+
+
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### 종목 정보
+
+* **종목명**
+```{r}
+renderText(Data$Name[Data$stock==paste(input$Stock1)][1])
+```
+
+
+* **시가총액**
+```{r}
+renderText(Data$MCapS[Data$stock==paste(input$Stock1)][1])
+```
+
+* **섹터**
+```{r}
+renderText(Data$Sector[Data$stock==paste(input$Stock1)][1])
+```
+
+* **산업**
+```{r}
+renderText(Data$Industry[Data$stock==paste(input$Stock1)][1])
+```
+
+
+### 경쟁력 (Source: Seeking Alpha Quant Ratings)
+
+* **산업 내 경쟁력**
+```{r}
+renderText(str_c(Data$TotalInIndustry[Data$stock==paste(input$Stock1)][1],
+                  " 개 종목 중 ",
+                 Data$RankInIndustry[Data$stock==paste(input$Stock1)][1],
+                 "위"))
+```
+
+* **섹터 내 경쟁력**
+```{r}
+renderText(str_c(Data$TotalInSector[Data$stock==paste(input$Stock1)][1],
+                  " 개 종목 중 ",
+                 Data$RankInSector[Data$stock==paste(input$Stock1)][1],
+                 "위"))
+```
+
+* **증시 내 경쟁력**
+```{r}
+renderText(str_c(Data$TotalInAll[Data$stock==paste(input$Stock1)][1],
+                  " 개 종목 중 ",
+                 Data$RankInAll[Data$stock==paste(input$Stock1)][1],
+                 "위"))
+```
+
+
+
+
+
+Column { .tabset}
+-----------------------------------------------------------------------
+
+### EPS 전망
+
+
+```{r}
+output$p1 <- renderPlot({
+
+  Data %>% 
+      select(EPSYear, EPS, stock, EPSAnalystNo, TrailPE) %>% 
+      filter(stock==input$Stock1) %>%
+      na.omit() -> Data_sub1
+
+    
+  text_caption1 = paste0("No. of Analyst Consensuses : ",
+                       paste(paste0(Data_sub1$EPSAnalystNo),
+                             " for ", Data_sub1$EPSYear, 
+                             sep=" ", collapse = ", "))
+  text_caption1a = paste0("Current PE Ratio ",paste(paste0(Data_sub1$TrailPE)), "x")
+
+  ggplot(data = Data_sub1, aes(x = as.character(EPSYear), y = EPS)) + 
+    geom_bar(stat = "identity", colour="lightblue", width = 0.5, position = position_dodge(width=0.5)) + 
+    geom_text(data=Data_sub1, aes(label=str_c("$",EPS), vjust= 4.5, hjust = 1.4), size = 6, color = "#FFFFFF", angle = 30) +
+    labs(x = "Year", y = "EPS", 
+         caption = str_c(text_caption1a,'\n\n',text_caption1)) +
+    scale_y_continuous("EPS", labels = scales::label_dollar(scale_cut =  scales::cut_short_scale())) +
+    theme_minimal() + 
+    theme(axis.text = element_text(size = 14),
+          axis.title = element_text(size = 13),
+          plot.caption = element_text(size=13))
+
+})
+
+output$p1a <- renderDataTable({
+  Data_sub1a <- Data %>% 
+    select(EPSYear, EPS, stock, EPSAnalystNo, TrailPE) %>% 
+      filter(stock==input$Stock1) %>%
+      na.omit() 
+    
+  filter(Data_sub1a[,c('EPSYear','TrailPE')])
+})
+
+plotOutput("p1")
+
+
+```
+
+### 매출 전망
+
+```{r}
+
+
+
+output$p2 <- renderPlot({
+
+  Data %>% 
+    select(SalesYear, SalesS, SalesN, stock, SalesAnalystNo, TrailPS) %>% 
+    filter(stock==input$Stock1) %>% 
+    na.omit -> Data_sub2
+  
+  text_caption2 = paste0("No. of Analyst Consensuses : ",
+                       paste(paste0(Data_sub2$SalesAnalystNo), 
+                             " for ", Data_sub2$SalesYear, sep=" ", collapse = ", "))
+  text_caption2a = paste0("Current PS Ratio ",paste(paste0(Data_sub2$TrailPS)), "x")
+  
+    ggplot(data = Data_sub2, aes(x = as.character(SalesYear), y = SalesN)) +
+    geom_bar(stat = "identity", colour="lightblue", width = 0.5, position = position_dodge(width=0.5)) + 
+    geom_text(data=Data_sub2, aes(label=str_c("$", SalesS), vjust= 5, hjust = 1), size = 6, color = "#FFFFFF", angle = 30) +
+    labs(x = "Year", y = "Total Revenue",  
+         caption = str_c(text_caption2a,'\n\n', text_caption2)) +
+    scale_y_continuous("Total Revenue", labels = scales::label_dollar(scale_cut =  scales::cut_short_scale())) +
+    theme_minimal() + 
+    theme(axis.text = element_text(size = 14),
+          axis.title = element_text(size = 13),
+          plot.caption = element_text(size=13))
+
+})
+
+
+plotOutput("p2")
+
+```
+
+
+### 배당금 전망
+
+```{r}
+
+output$p3 <- renderPlot({
+
+  Data %>% 
+    select(DivYear, Div, DivN, stock, DivAnalystNo, DivYield) %>% 
+    filter(stock==input$Stock1) -> Data_sub3
+  
+  text_caption3 = paste0("No. of Analyst Consensuses : ",
+                       paste(paste0(Data_sub3$DivAnalystNo),
+                             " for ", Data_sub3$DivYear,
+                             sep=" ", collapse = ", "))
+  
+  text_caption3a = paste0("Current Dividend Yield ",paste(paste0(Data_sub3$DivYield)), "x")
+  
+  if(is.na(Data_sub3$DivN)){
+    ggplot() +
+      annotate(geom = "text", x = 0, y = 0,
+               label = "This stock does not pay any dividend.",
+               size = 7) +
+    theme_void()
+  
+    } else {
+    
+  ggplot(data = Data_sub3, aes(x = as.character(DivYear), y = DivN))+ 
+    geom_bar(stat = "identity", colour="lightblue", width = 0.5, position = position_dodge(width=0.5)) + geom_text(data=Data_sub3, aes(label=Div, vjust= 5, hjust = 1.2), size = 6, color = "#FFFFFF", angle = 30) + 
+    labs(x = "Year", y = "DPS", caption = str_c(text_caption3a,'\n\n', text_caption3)) +
+    scale_y_continuous("DPS", labels = scales::label_dollar(scale_cut =  scales::cut_short_scale())) +
+    theme_minimal() + 
+    theme(axis.text = element_text(size = 14),
+          axis.title = element_text(size = 13),
+          plot.caption = element_text(size=13)) 
+        
+  }
+
+})
+
+plotOutput("p3")
+
+```
+
